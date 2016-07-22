@@ -1,62 +1,133 @@
+// Pins
 int pirPin = 2;
 int hallPin = 3;
 
+// Timing and Debounce intervals
 int waitTime = 1000;
 unsigned long now = 0;
 
-int hall;
-int pir;
-int hall_prev;
-bool move_state = false;
-bool movement = false;
+// Global variables for state
+volatile int hall;
+volatile int hall_previous;
+volatile int pir;
 
-unsigned long millis_last_triggered = millis();
+// Enumerated type and variables for the state of the gate
+enum gate_state {
+    open,
+    closed
+} gate_state;
+volatile enum gate_state gate;
+volatile enum gate_state gate_previous;
+
+// Enumerated type and variables for the state of the PIR
+enum movement_state {
+    detected,
+    quiet
+};
+volatile enum movement_state movement;
+volatile enum movement_state movement_previous;
+
+// Variable to debounce the PIR
+unsigned long pir_last_triggered = millis();
+
 
 // the setup routine runs once when you press reset:
 void setup() {
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
-  pinMode(pirPin, INPUT);
-  attachInterrupt(digitalPinToInterrupt(pirPin), moved, FALLING);
-  pinMode(hallPin, INPUT);
+    // initialize serial communication at 9600 bits per second:
+    Serial.begin(9600);
+    pinMode(hallPin, INPUT);
+    pinMode(pirPin, INPUT);
+
+    // Force the correct setting of the PIR interrupt by faking gate state change
+    hall = digitalRead(hallPin);
+    if (hall == 1) {
+        hall_prev = 0;
+    } else {
+        hall_prev = 1;
+    }
+    gate();
+
+    // Setup interrupt for the hall switch
+    attachInterrupt(digitalPinToInterrupt(hallPin), gate, CHANGE);
 }
 
-void moved() {
+
+void enable_pir_interrupt() {
+    attachInterrupt(digitalPinToInterrupt(pirPin), pir, FALLING);
+}
+
+
+void disable_pir_interrupt() {
+    detachInterrupt(digitalPinToInterrupt(pirPin));
+}
+
+
+// Interrupt handler for the PIR
+void pir() {
     millis_last_triggered = millis();
 }
 
-// the loop routine runs over and over again forever:
+
+// Interrupt handler for the Hall Effect sensor
+void gate() {
+    hall = digitalRead(hallPin);
+    if (hall != hall_prev) {
+        // The state has changed
+        if (hall == 1) {
+            gate = open;
+            enable_pir_interrupts();
+        } else {
+            gate = closed;
+            disable_pir_interrupts();
+            movement = quiet;
+        }
+        hall_prev = hall
+    }
+}
+
+// Notication functions
+void notify_gate(enum gate_state gate) {
+    if (gate == open) {
+        Serial.println("Gate Open");
+    } else {
+        Serial.println("Gate Closed");
+    }
+}
+
+
+void notify_movement (enum movement_state movement) {
+    if (movement = detected) {
+        Serial.println("Movement Detected");
+    } else {
+        Serial.println("All Quiet")
+    }
+}
+
+
 void loop() {
-  // read the input on analog pin 0:
-  int sensorValue = analogRead(A0);
-  int hall = digitalRead(hallPin);
-  int pir = digitalRead(pirPin);
-  if (hall != hall_prev){
-      if (hall == 0){
-          Serial.println("Gate closed");
-      } else {
-          Serial.println("Gate open");
-      }
-      hall_prev = hall;
-  }
+    // read the input on analog pin 0:
+    int sensorValue = analogRead(A0);
 
-  now = millis();
-  if (now > (millis_last_triggered + waitTime)){
-      movement = false;
-  } else {
-      movement = true;
-  }
+    // If the gate is open then use the PIR sensor to detect movement
+    if ( gate == open ) {
+        // Debounce PIR input
+        now = millis();
+        if (now > (millis_last_triggered + waitTime)){
+            movement = quiet;
+        } else {
+            movement = detected;
+        }
+        if (movement != movement_previous) {
+            notify_movement(movement);
+            movement_previous = movement;
+        }
+    }
 
-  if (move_state != movement){
-      Serial.print(millis());
-      move_state = movement;
-      if (movement){
-          Serial.println(": Movement detected");
-          Serial.println(sensorValue);
-      } else {
-          Serial.println(": All Quiet");
-      }
-  }
+    // Check for gate state change and notify if necessary
+    if (gate != gate_previous) {
+        notify_gate(gate);
+        gate_previous = gate;
+    }
 
-  delay(1);        // delay in between reads for stability
+    delay(1);        // delay in between reads for stability
 }
