@@ -1,31 +1,27 @@
+#include <avr/sleep.h>
+#include <avr/wdt.h>
+
+#include "data.h"
+#include "comms.h"
+
 // Pins
 int pirPin = 2;
 int hallPin = 3;
 
 // Timing and Debounce intervals
 int waitTime = 2000;
+int sleep_delay = 10000;
 unsigned long now = 0;
+volatile unsigned long last_activity = 0;
+
+// Watchdog Timer Flag
+volatile bool wdt_flag = false;
+int heartbeat_count = 8;
 
 // Global variables for state
 volatile int hall;
 volatile int hall_previous;
 volatile int pir;
-
-// Enumerated type and variables for the state of the gate
-enum gate_state {
-    open,
-    closed
-} gate_state;
-volatile enum gate_state gate;
-volatile enum gate_state gate_previous;
-
-// Enumerated type and variables for the state of the PIR
-enum movement_state {
-    detected,
-    quiet
-};
-volatile enum movement_state movement;
-volatile enum movement_state movement_previous;
 
 // Variable to debounce the PIR
 unsigned long pir_last_triggered = millis();
@@ -41,14 +37,27 @@ void disable_pir_interrupt() {
 }
 
 
+// watchdog interrupt
+ISR (WDT_vect)
+{
+   wdt_disable();  // disable watchdog
+   wdt_flag = true;
+}  // end of WDT_vect
+
+
 // Interrupt handler for the PIR
 void pir_triggered() {
+    // cancel sleep as a precaution
+    sleep_disable();
     pir_last_triggered = millis();
+    last_activity = millis();
 }
 
 
 // Interrupt handler for the Hall Effect sensor
 void gate_triggered() {
+    // cancel sleep as a precaution
+    sleep_disable();
     hall = digitalRead(hallPin);
     if (hall != hall_previous) {
         // The state has changed
@@ -62,24 +71,75 @@ void gate_triggered() {
         }
         hall_previous = hall;
     }
+    last_activity = millis();
 }
 
 // Notication functions
 void notify_gate(enum gate_state gate) {
-    if (gate == open) {
-        Serial.println("Gate Open");
-    } else {
-        Serial.println("Gate Closed");
-    }
+    //if (gate == open) {
+    //    Serial.println("Gate Open");
+    //} else {
+    //    Serial.println("Gate Closed");
+    //}
+    fill_gate_Payload(trigger_gate);
+    xbeeSend(zbTxGt);
 }
 
 
 void notify_movement (enum movement_state movement) {
     if (movement == detected) {
-        Serial.println("Movement Detected");
+        //Serial.println("Movement Detected");
+        fill_gate_Payload(trigger_movement);
+        xbeeSend(zbTxGt);
     } else {
-        Serial.println("All Quiet");
+        //Serial.println("All Quiet");
     }
+}
+
+
+// Sleep routines
+void go_to_sleep() {
+    //Serial.println("Going to sleep");
+    delay(1000);
+
+    // disable ADC
+     ADCSRA = 0;
+
+     // clear various "reset" flags
+    MCUSR = 0;  // allow changes, disable reset
+     WDTCSR = bit (WDCE) | bit (WDE);
+     // set interrupt mode and an interval
+     WDTCSR = bit (WDIE) | bit (WDP3) | bit (WDP0);    // set WDIE, and 1 second delay
+     wdt_reset();  // pat the dog
+
+
+     set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+     sleep_enable();
+
+     // Do not interrupt before we go to sleep, or the
+     // ISR will detach interrupts and we won't wake.
+     noInterrupts ();
+
+     // will be called when pin D2 goes low
+     //attachInterrupt (0, wake, FALLING);
+     //EIFR = bit (INTF0);  // clear flag for interrupt 0
+
+     // turn off brown-out enable in software
+     // BODS must be set to one and BODSE must be set to zero within four clock cycles
+     MCUCR = bit (BODS) | bit (BODSE);
+     // The BODS bit is automatically cleared after three clock cycles
+     MCUCR = bit (BODS);
+
+     // We are guaranteed that the sleep_cpu call will be done
+     // as the processor executes the next instruction after
+     // interrupts are turned on.
+     interrupts ();  // one cycle
+     sleep_cpu ();   // one cycle
+    // cancel sleep as a precaution
+    sleep_disable();
+    wdt_disable();
+    delay(1000);
+    //Serial.println("Awake");
 }
 
 
@@ -131,5 +191,19 @@ void loop() {
         gate_previous = gate;
     }
 
-    delay(1);        // delay in between reads for stability
+    // Do timed routines based on number of watchdog timer interrupts
+    if (wdt_flag) {
+        wdt_flag = false;
+        wdt_count++;
+        //Serial.print("WDT Wake ");
+        //Serial.println(wdt_count);
+        if (wdt_count % heartbeat_count == 0) {
+            xbeeSend(zbTxHB);
+            //Serial.println("Heartbeat");
+        }
+    }
+    now = millis();
+    if (now > last_activity + sleep_delay) {
+        go_to_sleep();        // delay in between reads for stability
+    }
 }
