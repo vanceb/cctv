@@ -3,7 +3,7 @@ int pirPin = 2;
 int hallPin = 3;
 
 // Timing and Debounce intervals
-int waitTime = 1000;
+int waitTime = 2000;
 unsigned long now = 0;
 
 // Global variables for state
@@ -31,29 +31,8 @@ volatile enum movement_state movement_previous;
 unsigned long pir_last_triggered = millis();
 
 
-// the setup routine runs once when you press reset:
-void setup() {
-    // initialize serial communication at 9600 bits per second:
-    Serial.begin(9600);
-    pinMode(hallPin, INPUT);
-    pinMode(pirPin, INPUT);
-
-    // Force the correct setting of the PIR interrupt by faking gate state change
-    hall = digitalRead(hallPin);
-    if (hall == 1) {
-        hall_prev = 0;
-    } else {
-        hall_prev = 1;
-    }
-    gate();
-
-    // Setup interrupt for the hall switch
-    attachInterrupt(digitalPinToInterrupt(hallPin), gate, CHANGE);
-}
-
-
 void enable_pir_interrupt() {
-    attachInterrupt(digitalPinToInterrupt(pirPin), pir, FALLING);
+    attachInterrupt(digitalPinToInterrupt(pirPin), pir_triggered, FALLING);
 }
 
 
@@ -63,25 +42,25 @@ void disable_pir_interrupt() {
 
 
 // Interrupt handler for the PIR
-void pir() {
-    millis_last_triggered = millis();
+void pir_triggered() {
+    pir_last_triggered = millis();
 }
 
 
 // Interrupt handler for the Hall Effect sensor
-void gate() {
+void gate_triggered() {
     hall = digitalRead(hallPin);
-    if (hall != hall_prev) {
+    if (hall != hall_previous) {
         // The state has changed
         if (hall == 1) {
             gate = open;
-            enable_pir_interrupts();
+            enable_pir_interrupt();
         } else {
             gate = closed;
-            disable_pir_interrupts();
+            disable_pir_interrupt();
             movement = quiet;
         }
-        hall_prev = hall
+        hall_previous = hall;
     }
 }
 
@@ -96,23 +75,46 @@ void notify_gate(enum gate_state gate) {
 
 
 void notify_movement (enum movement_state movement) {
-    if (movement = detected) {
+    if (movement == detected) {
         Serial.println("Movement Detected");
     } else {
-        Serial.println("All Quiet")
+        Serial.println("All Quiet");
     }
+}
+
+
+// the setup routine runs once when you press reset:
+void setup() {
+    // initialize serial communication at 9600 bits per second:
+    Serial.begin(9600);
+    pinMode(hallPin, INPUT);
+    pinMode(pirPin, INPUT);
+
+    // Force the correct setting of the PIR interrupt by faking gate state change
+    hall = digitalRead(hallPin);
+    if (hall == 1) {
+        hall_previous = 0;
+    } else {
+        hall_previous = 1;
+    }
+    gate_triggered();
+    movement = quiet;
+    movement_previous = quiet;
+
+    // Setup interrupt for the hall switch
+    attachInterrupt(digitalPinToInterrupt(hallPin), gate_triggered, CHANGE);
 }
 
 
 void loop() {
     // read the input on analog pin 0:
-    int sensorValue = analogRead(A0);
+    //int sensorValue = analogRead(A0);
 
     // If the gate is open then use the PIR sensor to detect movement
     if ( gate == open ) {
         // Debounce PIR input
         now = millis();
-        if (now > (millis_last_triggered + waitTime)){
+        if (now > (pir_last_triggered + waitTime)){
             movement = quiet;
         } else {
             movement = detected;
