@@ -104,7 +104,6 @@ void fillTxStatus(){
 static XBee xbee = XBee();
 static XBeeAddress64 addr64 = XBeeAddress64(COORDINATOR_SH, COORDINATOR_SL);
 static ZBTxStatusResponse txStatus = ZBTxStatusResponse();
-static ZBTxRequest zbTxHB = ZBTxRequest(addr64, (uint8_t *)&hb_payload, sizeof(hb_payload));
 static ZBTxRequest zbTxGt = ZBTxRequest(addr64, (uint8_t *)&gate_payload, sizeof(gate_payload));
 static ZBTxRequest zbTxStatus = ZBTxRequest(addr64, (uint8_t *)&txStatusPayload, sizeof(txStatusPayload));
 
@@ -131,27 +130,7 @@ void sleepXBee(){
 }
 
 // Returns the number of calls to this function before the XBee will actually wake - 0 means we woke it
-void wakeXBee(bool force=false){
-  /*
-    // We are not going to wake the XBee every time... (Unless forced)
-    if (force == true) {
-      xbeeSleepCount = 0;
-    } else {
-      if (xbeeSleepCount <= 0) {
-        // We woke last time and need to reset
-        xbeeSleepCount = XBEE_SLEEP_CYCLES;
-      } else {
-        xbeeSleepCount -= 1;
-      }
-    }
-
-    if (xbeeSleepCount <= 0) {
-      // Turn on the XBee
-      digitalWrite(XBEE_SLEEP, LOW);
-    }
-
-    return xbeeSleepCount;
-    */
+void wakeXBee(){
     pinMode (XBEE_SLEEP, OUTPUT);
     digitalWrite(XBEE_SLEEP, LOW);
 }
@@ -162,6 +141,9 @@ static int xbeeSend(ZBTxRequest zbTx){
    // Make sure the XBee is awake
     wakeXBee();
     // Wait for CTS from the XBee or timeout
+    // Using CTS required a hardware modification to the Seeedstudio Stalker
+    // Pin 6 (presented at JP6 has been connected to the CTS pin of the XBee
+    // using a jumper wire Soldered to the jumper JP6 on the back of the board
     bool gotCTS = false;
     unsigned long timeout = millis() + TX_CTS_TIMEOUT;
     while(millis() < timeout) {

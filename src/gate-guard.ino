@@ -5,8 +5,10 @@
 #include "comms.h"
 
 // Pins
-int pirPin = 2;
-int hallPin = 3;
+#define PIR_PIN 2
+#define HALL_PIN 3
+#define BATTERY_PIN A7
+#define SOLAR_PIN A2
 
 // Timing and Debounce intervals
 int waitTime = 2000;
@@ -26,14 +28,13 @@ volatile int pir;
 // Variable to debounce the PIR
 unsigned long pir_last_triggered = millis();
 
-
 void enable_pir_interrupt() {
-    attachInterrupt(digitalPinToInterrupt(pirPin), pir_triggered, FALLING);
+    attachInterrupt(digitalPinToInterrupt(PIR_PIN), pir_triggered, FALLING);
 }
 
 
 void disable_pir_interrupt() {
-    detachInterrupt(digitalPinToInterrupt(pirPin));
+    detachInterrupt(digitalPinToInterrupt(PIR_PIN));
 }
 
 
@@ -58,7 +59,7 @@ void pir_triggered() {
 void gate_triggered() {
     // cancel sleep as a precaution
     sleep_disable();
-    hall = digitalRead(hallPin);
+    hall = digitalRead(HALL_PIN);
     if (hall != hall_previous) {
         // The state has changed
         if (hall == 1) {
@@ -76,31 +77,32 @@ void gate_triggered() {
 
 // Notication functions
 void notify_gate(enum gate_state gate) {
-    //if (gate == open) {
-    //    Serial.println("Gate Open");
-    //} else {
-    //    Serial.println("Gate Closed");
-    //}
-    fill_gate_Payload(trigger_gate);
+    if (gate == open) {
+        fill_gate_Payload(gate_opened);
+    } else {
+        fill_gate_Payload(gate_closed);
+    }
     xbeeSend(zbTxGt);
 }
 
 
 void notify_movement (enum movement_state movement) {
     if (movement == detected) {
-        //Serial.println("Movement Detected");
-        fill_gate_Payload(trigger_movement);
-        xbeeSend(zbTxGt);
+        fill_gate_Payload(move_start);
     } else {
-        //Serial.println("All Quiet");
+        fill_gate_Payload(move_stop);
     }
+    xbeeSend(zbTxGt);
 }
 
 
 // Sleep routines
 void go_to_sleep() {
-    //Serial.println("Going to sleep");
+    // Give a chance for any remaining data to be sent
     delay(1000);
+
+    // Send the radio to sleep
+    sleepXBee();
 
     // disable ADC
      ADCSRA = 0;
@@ -138,7 +140,9 @@ void go_to_sleep() {
     // cancel sleep as a precaution
     sleep_disable();
     wdt_disable();
-    delay(1000);
+    wakeXBee();
+    // Give a chance for everything to settle
+    delay(50);
     //Serial.println("Awake");
 }
 
@@ -147,11 +151,15 @@ void go_to_sleep() {
 void setup() {
     // initialize serial communication at 9600 bits per second:
     Serial.begin(9600);
-    pinMode(hallPin, INPUT);
-    pinMode(pirPin, INPUT);
+    pinMode(HALL_PIN, INPUT);
+    pinMode(PIR_PIN, INPUT);
+
+    // Get initial values for the power readings
+    battery = analogRead(BATTERY_PIN);
+    solar = analogRead(SOLAR_PIN);
 
     // Force the correct setting of the PIR interrupt by faking gate state change
-    hall = digitalRead(hallPin);
+    hall = digitalRead(HALL_PIN);
     if (hall == 1) {
         hall_previous = 0;
     } else {
@@ -162,18 +170,17 @@ void setup() {
     movement_previous = quiet;
 
     // Setup interrupt for the hall switch
-    attachInterrupt(digitalPinToInterrupt(hallPin), gate_triggered, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(HALL_PIN), gate_triggered, CHANGE);
 }
 
 
 void loop() {
-    // read the input on analog pin 0:
-    //int sensorValue = analogRead(A0);
+    // What time is it for this loop?
+    now = millis();
 
     // If the gate is open then use the PIR sensor to detect movement
     if ( gate == open ) {
         // Debounce PIR input
-        now = millis();
         if (now > (pir_last_triggered + waitTime)){
             movement = quiet;
         } else {
@@ -195,15 +202,16 @@ void loop() {
     if (wdt_flag) {
         wdt_flag = false;
         wdt_count++;
-        //Serial.print("WDT Wake ");
-        //Serial.println(wdt_count);
         if (wdt_count % heartbeat_count == 0) {
-            xbeeSend(zbTxHB);
-            //Serial.println("Heartbeat");
+            battery = analogRead(BATTERY_PIN);
+            solar = analogRead(SOLAR_PIN);
+            fill_gate_Payload(heartbeat);
+            xbeeSend(zbTxGt);
         }
     }
-    now = millis();
+
     if (now > last_activity + sleep_delay) {
         go_to_sleep();        // delay in between reads for stability
     }
+    delay(1);
 }
