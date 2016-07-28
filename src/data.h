@@ -19,6 +19,7 @@
 unsigned long wdt_count = 0;
 uint16_t battery = 0;
 uint16_t solar = 0;
+uint8_t charge = 0;
 
 enum triggered_by {
     gate_closed,
@@ -53,13 +54,14 @@ typedef struct gateData {
     // Power
     uint16_t battery;
     uint16_t solar;
+    uint8_t charge;
 
     // Gate Status
     uint8_t gate;
     uint8_t movement;
 
     // Trigger event
-    uint16_t trigger;
+    uint8_t trigger;
 
 } Gate_Data;
 
@@ -90,6 +92,7 @@ void fill_gate_Payload (enum triggered_by trigger){
     gate_payload.data.watchdog_count = wdt_count;
     gate_payload.data.battery = battery;
     gate_payload.data.solar = solar;
+    gate_payload.data.charge = charge;
     gate_payload.data.gate = gate;
     gate_payload.data.movement = movement;
     gate_payload.data.trigger = trigger;

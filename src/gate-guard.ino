@@ -28,6 +28,9 @@ volatile int pir;
 // Variable to debounce the PIR
 unsigned long pir_last_triggered = millis();
 
+// Power saving
+byte original_ADCSRA;
+
 void enable_pir_interrupt() {
     attachInterrupt(digitalPinToInterrupt(PIR_PIN), pir_triggered, FALLING);
 }
@@ -96,6 +99,65 @@ void notify_movement (enum movement_state movement) {
 }
 
 
+// Power Saving and VCC Measurement from Nick Gammon's forum
+// http://www.gammon.com.au/forum/?id=11497
+
+const long InternalReferenceVoltage = 1075;  // Adjust this value to your board's specific internal BG voltage
+
+// Code courtesy of "Coding Badly" and "Retrolefty" from the Arduino forum
+// results are Vcc * 100
+// So for example, 5V would be 500.
+int getBandgap ()
+  {
+  // REFS0 : Selects AVcc external reference
+  // MUX3 MUX2 MUX1 : Selects 1.1V (VBG)
+   ADMUX = bit (REFS0) | bit (MUX3) | bit (MUX2) | bit (MUX1);
+   ADCSRA |= bit( ADSC );  // start conversion
+   while (ADCSRA & bit (ADSC))
+     { }  // wait for conversion to complete
+   int results = (((InternalReferenceVoltage * 1024) / ADC) + 5) / 10;
+   return results;
+  } // end of getBandgap
+
+void update_pwr() {
+    // Enable ADC
+    ADCSRA = original_ADCSRA;
+    // Wait for it to settle
+    delay(100);
+
+    //battery = getBandgap();
+    // Multiply reading by 2 approximates to the actual voltage
+    battery = analogRead(BATTERY_PIN) * 2;
+    solar = analogRead(SOLAR_PIN);
+    charge = read_charge_status();
+
+    // disable ADC
+    ADCSRA = 0;
+}
+
+unsigned char read_charge_status(void)
+{
+  unsigned char CH_Status=0;
+  unsigned int ADC6=analogRead(6);
+  if(ADC6>900)
+  {
+    CH_Status = 0;//sleeping
+  }
+  else if(ADC6>550)
+  {
+    CH_Status = 1;//charging
+  }
+  else if(ADC6>350)
+  {
+    CH_Status = 2;//done
+  }
+  else
+  {
+    CH_Status = 3;//error
+  }
+  return CH_Status;
+}
+
 // Sleep routines
 void go_to_sleep() {
     // Give a chance for any remaining data to be sent
@@ -104,8 +166,8 @@ void go_to_sleep() {
     // Send the radio to sleep
     sleepXBee();
 
-    // disable ADC
-     ADCSRA = 0;
+    // We already disabled the ADC
+    //ADCSRA = 0;
 
      // clear various "reset" flags
     MCUSR = 0;  // allow changes, disable reset
@@ -146,17 +208,18 @@ void go_to_sleep() {
     //Serial.println("Awake");
 }
 
-
 // the setup routine runs once when you press reset:
 void setup() {
     // initialize serial communication at 9600 bits per second:
     Serial.begin(9600);
     pinMode(HALL_PIN, INPUT);
     pinMode(PIR_PIN, INPUT);
+    pinMode(BATTERY_PIN, INPUT);
+    pinMode(SOLAR_PIN, INPUT);
 
     // Get initial values for the power readings
-    battery = analogRead(BATTERY_PIN);
-    solar = analogRead(SOLAR_PIN);
+    original_ADCSRA = ADCSRA;
+    update_pwr();
 
     // Force the correct setting of the PIR interrupt by faking gate state change
     hall = digitalRead(HALL_PIN);
@@ -203,8 +266,8 @@ void loop() {
         wdt_flag = false;
         wdt_count++;
         if (wdt_count % heartbeat_count == 0) {
-            battery = analogRead(BATTERY_PIN);
-            solar = analogRead(SOLAR_PIN);
+            // Update the readings from the solar and battery
+            update_pwr();
             fill_gate_Payload(heartbeat);
             xbeeSend(zbTxGt);
         }
