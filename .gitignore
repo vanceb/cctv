@@ -27,3 +27,5 @@
 *.out
 *.app
 >>>>>>> baf02ba3ec7332a8222666d735eee705f87c7d70
+.piolibdeps
+.DS_Store

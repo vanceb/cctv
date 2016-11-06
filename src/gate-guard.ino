@@ -126,9 +126,9 @@ void update_pwr() {
     delay(100);
 
     //battery = getBandgap();
-    // Multiply reading by 2 approximates to the actual voltage
+    // Multiply reading by 2 approximates to the actual voltage * 100
     battery = analogRead(BATTERY_PIN) * 2;
-    solar = analogRead(SOLAR_PIN);
+    solar = analogRead(SOLAR_PIN) * 2;
     charge = read_charge_status();
 
     // disable ADC
@@ -216,6 +216,7 @@ void setup() {
     pinMode(PIR_PIN, INPUT);
     pinMode(BATTERY_PIN, INPUT);
     pinMode(SOLAR_PIN, INPUT);
+    pinMode(6, INPUT); // Used to measure charge status
 
     // Get initial values for the power readings
     original_ADCSRA = ADCSRA;
