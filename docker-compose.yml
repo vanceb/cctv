@@ -1,0 +1,18 @@
+version: '3'
+services:
+  mqtt:
+    image: "ansi/mosquitto"
+    ports:
+      - "1883:1883"
+  mqtt-gateway:
+    build: ./mqtt-gateway
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"
+    links:
+      - mqtt:mosquitto
+  mqtt-cctv:
+    build: ./mqtt-cctv
+    links:
+      - mqtt:mosquitto
+    volumes:
+      - "/data/cctv/events:/cctv/events"
