@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -27,13 +20,7 @@ lib64/
 parts/
 sdist/
 var/
-<<<<<<< HEAD
-<<<<<<< HEAD
 wheels/
-=======
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
 *.egg-info/
 .installed.cfg
 *.egg
@@ -56,15 +43,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
-<<<<<<< HEAD
-<<<<<<< HEAD
 *.cover
-=======
-*,cover
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
-*,cover
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
 .hypothesis/
 
 # Translations
@@ -88,69 +67,26 @@ docs/_build/
 # PyBuilder
 target/
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Jupyter Notebook
-=======
-# IPython Notebook
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
-# IPython Notebook
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
-.ipynb_checkpoints
-
 # pyenv
 .python-version
 
 # celery beat schedule file
 celerybeat-schedule
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-# SageMath parsed files
-*.sage.py
-
-=======
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
 # dotenv
 .env
-
-# virtualenv
-<<<<<<< HEAD
-<<<<<<< HEAD
-.venv
-=======
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
-venv/
-ENV/
-
-# Spyder project settings
-.spyderproject
-<<<<<<< HEAD
-<<<<<<< HEAD
-.spyproject
-=======
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
 
 # Rope project settings
 .ropeproject
 
-<<<<<<< HEAD
 # mkdocs documentation
 /site
 
 # mypy
 .mypy_cache/
-=======
 .pioenvs
 .clang_complete
 .gcc-flags.json
-<<<<<<< HEAD
-=======
 # Compiled Object files
 *.slo
 *.lo
@@ -174,16 +110,8 @@ ENV/
 *.exe
 *.out
 *.app
->>>>>>> baf02ba3ec7332a8222666d735eee705f87c7d70
 .piolibdeps
 .DS_Store
->>>>>>> 0caf342859bdd3336ffd8114a08f62110f9687ab
-=======
 
-# Rope project settings
-.ropeproject
->>>>>>> 02074b3b41cb55c7d27d5b148b02f82e7c58e6d0
-=======
 # Logs directory
 logs/
->>>>>>> 39cce16840a5d2503b49676bb55ac93b8351fdba
