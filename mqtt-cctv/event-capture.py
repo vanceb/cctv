@@ -12,7 +12,8 @@ from threading import Thread
 from subprocess import call
 
 IMAGE_URL = "http://192.168.37.21/oneshotimage.jpg"
-MQTT_HOST = "localhost"
+# The MQTT host will be another container that is part of the docker compose setup
+MQTT_HOST = "mosquitto"
 MQTT_PORT = 1883
 EVENT_DIR = "/cctv/events"
 GRAB_FOR_SECS = 30
@@ -39,24 +40,6 @@ def setup_logging(default_path='logging.json',
     else:
         logging.basicConfig(level=default_level)
         logging.info("Configured logging basic")
-
-
-def docker_mqtt():
-    # Settings for MQTT Server
-    DOCKER_MQTT_ADDR = os.environ.get('MOSQUITTO_PORT_1883_TCP_ADDR', None)
-    DOCKER_MQTT_PORT = os.environ.get('MOSQUITTO_PORT_1883_TCP_PORT', None)
-
-    if DOCKER_MQTT_PORT is not None and DOCKER_MQTT_ADDR is not None:
-        logging.info("Using linked Docker mqtt: "
-                     + DOCKER_MQTT_ADDR + ":" + str(DOCKER_MQTT_PORT))
-        # We are running in a Linked Docker environment
-        # Use Docker Linked Container environment variables for setup
-        global MQTT_HOST
-        global MQTT_PORT
-        MQTT_HOST = DOCKER_MQTT_ADDR
-        MQTT_PORT = int(DOCKER_MQTT_PORT)
-    else:
-        logging.info("Using defaul mqtt server")
 
 
 def on_connect(client, userdata, rc):
@@ -192,7 +175,6 @@ def make_video(in_q):
 
 if __name__ == "__main__":
     setup_logging()
-    docker_mqtt()
     q1 = Queue()
     q2 = Queue()
     t1 = Thread(target=frame_grabber, args=(q1, q2, IMAGE_URL,))

@@ -2,16 +2,19 @@ version: '3'
 services:
   mqtt:
     image: "ansi/mosquitto"
+    restart: always
     ports:
       - "1883:1883"
   mqtt-gateway:
     build: ./mqtt-gateway
+    restart: always
     devices:
       - "/dev/ttyUSB0:/dev/ttyUSB0"
     links:
       - mqtt:mosquitto
   mqtt-cctv:
     build: ./mqtt-cctv
+    restart: always
     links:
       - mqtt:mosquitto
     volumes:

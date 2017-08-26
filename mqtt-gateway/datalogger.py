@@ -289,21 +289,11 @@ class gateHandler(msgHandler):
 
 
 def mqtt_connect(client):
-    # Settings for MQTT Server
-    DOCKER_MQTT_ADDR = os.environ.get('MOSQUITTO_PORT_1883_TCP_ADDR', None)
-    DOCKER_MQTT_PORT = os.environ.get('MOSQUITTO_PORT_1883_TCP_PORT', None)
-
-    if DOCKER_MQTT_PORT is not None and DOCKER_MQTT_ADDR is not None:
-        # We are running in a Linked Docker environment
-        # Use Docker Linked Container environment variables for setup
-        MQTT_HOST = DOCKER_MQTT_ADDR
-        MQTT_PORT = DOCKER_MQTT_PORT
-    else:
-        # Provide some fallback in case running outside Docker
-        MQTT_HOST = 'localhost'
-        MQTT_PORT = 1883
     # Connect to the mqtt server
-    client.connect(MQTT_HOST, MQTT_PORT, 60)
+    # This will be run using docker-compose so the hostname mosquitto relates to another container
+    datalog = logging.getLogger('data')
+    datalog.info("Connecting to the mqtt broker on mosquitto:1883")
+    client.connect("mosquitto", 1883, 60)
 
 # MQTT callbacks
 def on_connect(client, userdata, flags, rc):

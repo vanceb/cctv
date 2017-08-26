@@ -46,12 +46,12 @@
 "loggers": {
     "cctv": {
         "level": "INFO",
-        "handlers": ["cctv_handler"]
+        "handlers": ["console"]
     }
 },
 
 "root": {
-    "level": "DEBUG",
-    "handlers": ["console", "application_log_handler"]
+    "level": "INFO",
+    "handlers": ["console"]
 }
 }
