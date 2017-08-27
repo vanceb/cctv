@@ -234,9 +234,9 @@ class txStatusHandler(msgHandler):
         self.setCSVFields(["logtime", "millis", "packets", "cts_timeout", "local_timeout", "network_ack",\
                             "not_joined", "cca", "invalid_dest", "self_addr", "addr_not_found", "no_route",\
                             "payload_too_big", "other"])
-        #self.setJSONFields(i["logtime", "millis", "packets", "cts_timeout", "local_timeout", "network_ack",\
-        #                     "not_joined", "cca", "invalid_dest", "self_addr", "addr_not_found", "no_route",\
-        #                     "payload_too_big", "other"])
+        self.setJSONFields(["logtime", "millis", "packets", "cts_timeout", "local_timeout", "network_ack",\
+                             "not_joined", "cca", "invalid_dest", "self_addr", "addr_not_found", "no_route",\
+                             "payload_too_big", "other"])
 
     def decode(self, msg):
         try:
