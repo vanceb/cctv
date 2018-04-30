@@ -149,7 +149,7 @@ def make_video(in_q):
             shutil.rmtree(msg, ignore_errors=True)
 
             # Update symlinks
-            latest = EVENT_DIR + "/latest"
+            latest = EVENT_DIR + "/latest.mp4"
             today = EVENT_DIR + "/today"
             try:
                 os.remove(latest)
