@@ -4,7 +4,7 @@ services:
     image: "ansi/mosquitto"
     restart: always
     ports:
-      - "1883:1883"
+      - "21883:1883"
   mqtt-gateway:
     build: ./mqtt-gateway
     restart: always
